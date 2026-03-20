@@ -1,0 +1,5 @@
+{
+  "name": "Infinite Zoom Planet",
+  "description": "A proof-of-concept infinite zoom platform that generates an otherworldly planet using Gemini 2.5 Flash Image and Babylon.js, allowing users to zoom in infinitely.",
+  "requestFramePermissions": []
+}
