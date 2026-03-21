@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { PlanetEngine } from '@/lib/PlanetEngine';
 import { Vector3 } from '@babylonjs/core';
-import { Loader2, Key, Download, Upload, History, Play, ArrowUp, Info, Eye, EyeOff, Layers, Globe } from 'lucide-react';
+import { Loader2, Key, Download, Upload, History, Play, ArrowUp, Info, Eye, EyeOff, Layers, Globe, Activity } from 'lucide-react';
 import { zoomDB, ZoomSession } from '@/lib/db';
+import { DescentMinigameView } from '@/lib/descent-minigame/components/DescentMinigameView';
 
 export default function Home() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,6 +48,16 @@ Resolution: high detail, texture-quality`;
 
     const [basePrompt, setBasePrompt] = useState(defaultBasePrompt);
     const [upscalePrompt, setUpscalePrompt] = useState(defaultUpscalePrompt);
+    
+    // High Quality "Nano Banana" 4K Model toggles
+    const [useHighQuality, setUseHighQuality] = useState(false);
+    const [highQualityModel, setHighQualityModel] = useState("gemini-3-pro-image-preview");
+
+    // Dev settings for Camera Shake
+    const [shakeFreqScalar, setShakeFreqScalar] = useState(1.0);
+    const [shakeVibrationAmp, setShakeVibrationAmp] = useState(1.0);
+    const [shakeTurbulenceAmp, setShakeTurbulenceAmp] = useState(1.0);
+    const [reentryVisualsAmp, setReentryVisualsAmp] = useState(1.0);
 
     const [cachedSession, setCachedSession] = useState<ZoomSession | null>(null);
     const [isApproaching, setIsApproaching] = useState(false);
@@ -57,6 +68,10 @@ Resolution: high detail, texture-quality`;
     const [planetVisible, setPlanetVisible] = useState(true);
     const [layerSpacingScalar, setLayerSpacingScalar] = useState(1.0);
     const [isAscending, setIsAscending] = useState(false);
+    
+    // Minigame State
+    const [showMinigame, setShowMinigame] = useState(false);
+    const [lastMinigameScore, setLastMinigameScore] = useState<number | null>(null);
 
     const isZoomSession = (obj: any): obj is ZoomSession => {
         return obj && typeof obj === 'object' && Array.isArray(obj.images);
@@ -71,6 +86,24 @@ Resolution: high detail, texture-quality`;
 
         const savedUpscalePrompt = localStorage.getItem('customUpscalePrompt');
         if (savedUpscalePrompt) setUpscalePrompt(savedUpscalePrompt);
+
+        const savedHQ = localStorage.getItem('useHighQuality');
+        if (savedHQ) setUseHighQuality(savedHQ === 'true');
+
+        const savedHQModel = localStorage.getItem('highQualityModel');
+        if (savedHQModel) setHighQualityModel(savedHQModel);
+
+        const savedFreq = localStorage.getItem('shakeFreqScalar');
+        if (savedFreq) setShakeFreqScalar(parseFloat(savedFreq));
+
+        const savedVib = localStorage.getItem('shakeVibrationAmp');
+        if (savedVib) setShakeVibrationAmp(parseFloat(savedVib));
+
+        const savedTurb = localStorage.getItem('shakeTurbulenceAmp');
+        if (savedTurb) setShakeTurbulenceAmp(parseFloat(savedTurb));
+
+        const savedVisuals = localStorage.getItem('reentryVisualsAmp');
+        if (savedVisuals) setReentryVisualsAmp(parseFloat(savedVisuals));
 
         const savedSpacing = localStorage.getItem('customLayerSpacing');
         if (savedSpacing) setLayerSpacingScalar(parseFloat(savedSpacing));
@@ -107,6 +140,13 @@ Resolution: high detail, texture-quality`;
         localStorage.setItem('customGeminiKey', trimmedKey);
         localStorage.setItem('customBasePrompt', basePrompt);
         localStorage.setItem('customUpscalePrompt', upscalePrompt);
+        localStorage.setItem('useHighQuality', useHighQuality.toString());
+        localStorage.setItem('highQualityModel', highQualityModel);
+        
+        localStorage.setItem('shakeFreqScalar', shakeFreqScalar.toString());
+        localStorage.setItem('shakeVibrationAmp', shakeVibrationAmp.toString());
+        localStorage.setItem('shakeTurbulenceAmp', shakeTurbulenceAmp.toString());
+        localStorage.setItem('reentryVisualsAmp', reentryVisualsAmp.toString());
         
         setCustomKey(trimmedKey);
         setShowKeyModal(false);
@@ -114,6 +154,12 @@ Resolution: high detail, texture-quality`;
             engineRef.current.customApiKey = trimmedKey;
             engineRef.current.upscalePromptTemplate = upscalePrompt;
             engineRef.current.layerSpacingScalar = layerSpacingScalar;
+            engineRef.current.useHighQuality = useHighQuality;
+            engineRef.current.highQualityModel = highQualityModel;
+            engineRef.current.shakeFreqScalar = shakeFreqScalar;
+            engineRef.current.shakeVibrationAmp = shakeVibrationAmp;
+            engineRef.current.shakeTurbulenceAmp = shakeTurbulenceAmp;
+            engineRef.current.reentryVisualsAmp = reentryVisualsAmp;
         }
         localStorage.setItem('customLayerSpacing', layerSpacingScalar.toString());
     };
@@ -179,6 +225,12 @@ Resolution: high detail, texture-quality`;
                             }
                         });
                         engineRef.current.tripDuration = tripMinutes * 60;
+                        engineRef.current.useHighQuality = useHighQuality;
+                        engineRef.current.highQualityModel = highQualityModel;
+                        engineRef.current.shakeFreqScalar = shakeFreqScalar;
+                        engineRef.current.shakeVibrationAmp = shakeVibrationAmp;
+                        engineRef.current.shakeTurbulenceAmp = shakeTurbulenceAmp;
+                        engineRef.current.reentryVisualsAmp = reentryVisualsAmp;
                     }
 
                     if (engineRef.current) {
@@ -232,6 +284,12 @@ Resolution: high detail, texture-quality`;
                     }
                 });
                 engineRef.current.tripDuration = tripMinutes * 60;
+                engineRef.current.useHighQuality = useHighQuality;
+                engineRef.current.highQualityModel = highQualityModel;
+                engineRef.current.shakeFreqScalar = shakeFreqScalar;
+                engineRef.current.shakeVibrationAmp = shakeVibrationAmp;
+                engineRef.current.shakeTurbulenceAmp = shakeTurbulenceAmp;
+                engineRef.current.reentryVisualsAmp = reentryVisualsAmp;
             }
             
             engineRef.current.zoomImages = cachedSession.images;
@@ -294,8 +352,10 @@ Resolution: high detail, texture-quality`;
 
             try {
                 const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
+                const modelToUse = useHighQuality ? highQualityModel : 'gemini-2.5-flash-image';
+                
                 const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash-image',
+                    model: modelToUse,
                     contents: { parts: [{ text: basePrompt }] },
                     config: { imageConfig: { aspectRatio: "16:9" } }
                 });
@@ -337,8 +397,20 @@ Resolution: high detail, texture-quality`;
                     }
                 });
                 engineRef.current.tripDuration = tripMinutes * 60;
+                engineRef.current.useHighQuality = useHighQuality;
+                engineRef.current.highQualityModel = highQualityModel;
+                engineRef.current.shakeFreqScalar = shakeFreqScalar;
+                engineRef.current.shakeVibrationAmp = shakeVibrationAmp;
+                engineRef.current.shakeTurbulenceAmp = shakeTurbulenceAmp;
+                engineRef.current.reentryVisualsAmp = reentryVisualsAmp;
             } else {
                 engineRef.current.customApiKey = apiKeyToUse;
+                engineRef.current.useHighQuality = useHighQuality;
+                engineRef.current.highQualityModel = highQualityModel;
+                engineRef.current.shakeFreqScalar = shakeFreqScalar;
+                engineRef.current.shakeVibrationAmp = shakeVibrationAmp;
+                engineRef.current.shakeTurbulenceAmp = shakeTurbulenceAmp;
+                engineRef.current.reentryVisualsAmp = reentryVisualsAmp;
             }
 
             await engineRef.current.createPlanet(initialImageUrl);
@@ -402,12 +474,23 @@ Resolution: high detail, texture-quality`;
                                     <Play className="w-5 h-5 fill-current" />
                                     Approach
                                 </button>
-                                <button onClick={handleAscend} className="flex-1 px-4 py-4 bg-zinc-700 text-white font-bold rounded-xl hover:bg-zinc-600 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg">
+                                <button onClick={() => setShowMinigame(true)} className="flex-1 px-4 py-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-500 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-red-500/30 scale-105 active:scale-100">
+                                    <Activity className="w-5 h-5" />
+                                    Minigame
+                                </button>
+                            </div>
+                            <div className="flex gap-2 w-full">
+                                <button onClick={handleAscend} className="flex-1 px-4 py-3 bg-zinc-700 text-white font-bold rounded-xl hover:bg-zinc-600 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg">
                                     <ArrowUp className="w-5 h-5" />
                                     Ascend
                                 </button>
                             </div>
-                            <button onClick={handleLoadLast} className="w-full px-4 py-2 bg-indigo-900/40 text-indigo-200 text-xs font-semibold rounded-lg hover:bg-indigo-900/60 transition-colors border border-indigo-500/20">
+                            {lastMinigameScore !== null && (
+                                <div className="text-center text-xs text-red-400 font-bold bg-red-500/10 py-2 rounded-lg border border-red-500/20">
+                                    Last Drop Scalar: {lastMinigameScore.toFixed(3)}
+                                </div>
+                            )}
+                            <button onClick={handleLoadLast} className="w-full px-4 py-2 bg-indigo-900/40 text-indigo-200 text-xs font-semibold rounded-lg hover:bg-indigo-900/60 transition-colors border border-indigo-500/20 mt-2">
                                 Re-Sync Session
                             </button>
                         </div>
@@ -546,6 +629,29 @@ Resolution: high detail, texture-quality`;
                             />
                         </div>
 
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5 flex flex-col gap-3">
+                            <label className="flex items-center gap-3 cursor-pointer group" onClick={(e) => { e.preventDefault(); setUseHighQuality(!useHighQuality); }}>
+                                <div className={`relative w-12 h-6 rounded-full transition-colors flex items-center ${useHighQuality ? 'bg-indigo-500' : 'bg-black border border-white/20'}`}>
+                                    <div className={`absolute w-4 h-4 rounded-full bg-white transition-transform ${useHighQuality ? 'translate-x-7' : 'translate-x-1'}`} />
+                                </div>
+                                <span className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors">Use "Nano Banana" 4K (High Quality Model)</span>
+                            </label>
+                            
+                            {useHighQuality && (
+                                <div className="pl-14">
+                                    <label className="block text-xs font-medium text-white/50 mb-1">Model String</label>
+                                    <input 
+                                        type="text" 
+                                        value={highQualityModel} 
+                                        onChange={(e) => setHighQualityModel(e.target.value)} 
+                                        className="w-full bg-black border border-indigo-500/30 rounded-lg p-2.5 text-indigo-100 text-sm focus:outline-none focus:border-indigo-500" 
+                                        placeholder="gemini-3-pro-image-preview"
+                                    />
+                                    <p className="text-[10px] text-white/30 mt-1">Defaults to the highest quality Google image model.</p>
+                                </div>
+                            )}
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-white/70 mb-1">
                                 Layer Spacing Scalar — <span className="text-indigo-400 font-bold">{layerSpacingScalar.toFixed(1)}x</span>
@@ -566,12 +672,59 @@ Resolution: high detail, texture-quality`;
                             </div>
                         </div>
 
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5 flex flex-col gap-4">
+                            <h3 className="text-sm font-bold text-white/90 border-b border-white/10 pb-2">Reentry Effects Dev Settings</h3>
+                            
+                            <div>
+                                <label className="flex justify-between text-xs font-medium text-white/70 mb-1">
+                                    <span>Visual Shader Intensity</span>
+                                    <span className="text-orange-400 font-bold">{reentryVisualsAmp.toFixed(2)}x</span>
+                                </label>
+                                <input type="range" min="0" max="3" step="0.1" value={reentryVisualsAmp} onChange={(e) => setReentryVisualsAmp(parseFloat(e.target.value))} className="w-full accent-orange-400" />
+                            </div>
+
+                            <div>
+                                <label className="flex justify-between text-xs font-medium text-white/70 mb-1">
+                                    <span>Shake Frequency / Speed Multiplier</span>
+                                    <span className="text-orange-400 font-bold">{shakeFreqScalar.toFixed(2)}x</span>
+                                </label>
+                                <input type="range" min="0.1" max="5" step="0.1" value={shakeFreqScalar} onChange={(e) => setShakeFreqScalar(parseFloat(e.target.value))} className="w-full accent-orange-400" />
+                            </div>
+
+                            <div>
+                                <label className="flex justify-between text-xs font-medium text-white/70 mb-1">
+                                    <span>High-Frequency Vibration Amplitude</span>
+                                    <span className="text-orange-400 font-bold">{shakeVibrationAmp.toFixed(2)}x</span>
+                                </label>
+                                <input type="range" min="0" max="5" step="0.1" value={shakeVibrationAmp} onChange={(e) => setShakeVibrationAmp(parseFloat(e.target.value))} className="w-full accent-orange-400" />
+                            </div>
+
+                            <div>
+                                <label className="flex justify-between text-xs font-medium text-white/70 mb-1">
+                                    <span>Low-Frequency Turbulence Amplitude</span>
+                                    <span className="text-orange-400 font-bold">{shakeTurbulenceAmp.toFixed(2)}x</span>
+                                </label>
+                                <input type="range" min="0" max="10" step="0.1" value={shakeTurbulenceAmp} onChange={(e) => setShakeTurbulenceAmp(parseFloat(e.target.value))} className="w-full accent-orange-400" />
+                            </div>
+                        </div>
+
                         <div className="flex justify-end gap-3 mt-4">
                             <button onClick={() => setShowKeyModal(false)} className="px-5 py-2.5 rounded-lg text-white/70 hover:bg-white/5 transition-colors font-medium">Cancel</button>
                             <button onClick={handleSaveSettings} className="px-5 py-2.5 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors font-medium">Save Settings</button>
                         </div>
                     </div>
                 </div>
+            )}
+            
+            {showMinigame && (
+                <DescentMinigameView 
+                    images={engineRef.current?.zoomImages || cachedSession?.images || []}
+                    equiUrl={engineRef.current?.equiUrl || cachedSession?.equiUrl || null}
+                    onClose={(score) => {
+                        setShowMinigame(false);
+                        if (score !== undefined) setLastMinigameScore(score);
+                    }}
+                />
             )}
         </main>
     );

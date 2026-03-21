@@ -1,0 +1,65 @@
+[
+    {
+        "id": "init_sys",
+        "expectedCommand": "sys-001",
+        "description": "Initialize Boot",
+        "loreBabble": null,
+        "requiresVoice": false
+    },
+    {
+        "id": "chk_pwr",
+        "expectedCommand": "pwr-chk",
+        "description": "Power Grid Diagnostic",
+        "loreBabble": null,
+        "requiresVoice": false
+    },
+    {
+        "id": "align_nav",
+        "expectedCommand": "nav-xyz",
+        "description": "Align Navigation Matrix",
+        "loreBabble": null,
+        "requiresVoice": false
+    },
+    {
+        "id": "sync_comms",
+        "expectedCommand": "com-hz1",
+        "description": "Synchronize Comm Relays",
+        "loreBabble": "COMM RELAYS ENGAGED AND HOLDING STEADY ON FREQUENCY ALPHA",
+        "requiresVoice": true
+    },
+    {
+        "id": "rtr_pwr",
+        "expectedCommand": "rtr-bck",
+        "description": "Route Backup Power",
+        "loreBabble": null,
+        "requiresVoice": false
+    },
+    {
+        "id": "eng_rdn",
+        "expectedCommand": "eng-rdn",
+        "description": "Engage Redundancy Subsystems",
+        "loreBabble": null,
+        "requiresVoice": false
+    },
+    {
+        "id": "tgl_lif",
+        "expectedCommand": "lif-spt",
+        "description": "Toggle Life Support Bypass",
+        "loreBabble": null,
+        "requiresVoice": false
+    },
+    {
+        "id": "arm_shd",
+        "expectedCommand": "shd-max",
+        "description": "Arm Thermal Shields",
+        "loreBabble": "THERMAL SHIELDS FULLY CHARGED AND READY FOR HIGH KINETIC ENTRY",
+        "requiresVoice": true
+    },
+    {
+        "id": "verify_drop",
+        "expectedCommand": "drp-cfg",
+        "description": "Verify Drop Coordinates",
+        "loreBabble": "DROP COORDINATES LOCKED PAYLOAD ARMED FOR ATMOSPHERIC DESCENT",
+        "requiresVoice": true
+    }
+]

@@ -1,0 +1,35 @@
+this app, it was a prototype created in an online ide with no local file storage. 
+
+but our catched assets and asset library need local storage access and need to be isolated with their own connections (so i can use it anywhere in any game) 
+so catched assets (both raw and edited, and generated pbr layers, entire glbs, etc,  what ever we make, need to be catched in a self creating file directory. 
+
+the directory will have a dynamic evolving unique heiarchy folder system, and some sort of data structure like a json that keeps tabs on the entire structure, and a littel update worker that makes sure everything is acounted for. 
+
+the request for the asset should come with a name like client decided name and network like otherworldly/biome_jungle/trees/glowing/tall/spike_tree
+
+where the nest can be as long as the user wants, and the lowest is the deepest nest: 
+
+{parent_name}/{child_01}/{child_02}/{child_nn}.
+
+
+if the directory doesnt exist yet then it auto creates the path and the new asset async. 
+
+if the directory does exist then theres an asset in there, so we default to pull from that pool stochastically. but if an input parameter comes with the request of unique=true then it becomes an async request, and has to generate a new fresh asset. we keep a special pool of unique assets in the same dir nest with the same name, but with "_u" attached to it. its default to a single "_u" but input parameters with a request can set the number of unique buffers we have. 
+
+with the request we can also input parameters that edit the asset. thes include functional inputs like, crop, colorize, greyscale, upscale, resize, etc. we can add more functions later as we go.. 
+
+the asset_editor will be another isolated library that the asset_lib_manager uses to edit assets. this will include things like procedual edge detection, full procedual PBR generation. and .glb packages. 
+
+the actual file names will contain the file type as usual .glb, .png, etc. and the raw generation image will have the word "_R" at the end which stands for raw, and "_E" for edited
+
+
+, so a client can request an existing asset, 
+or they can request an asset that hasnt been made yet, or they can request {n} number of  assets to be made without returning anything (a client side replenishing potion). 
+
+the client sends in the theming prompt for the image and image requirements via another isolated library called prompt-forge which i already have built (ill provide the repo) 
+
+
+**instructions**
+- each and every feature in my thought  imput is required to be clearly stated in the design thoughts. 
+- review existing code so you can see what we will be moving from. 
+@beautifulMention 
