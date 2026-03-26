@@ -1,0 +1,728 @@
+Debugging WebGPU Initialization and Orchestrator Constructor
+Successfully patched the DescentMinigame view initialization order, allowing Babylon.js to request WebGPU hooks asynchronously before executing the WGSL dummy tests.
+
+Files Edited
+Progress Updates
+1
+Looking into MinigameOrchestrator.ts to migrate the synchronous WebGL Engine instantiation to an asynchronous WebGPUEngine flow.
+
+2
+Migrating the Engine generation code from the Constructor to the Start method using WebGPUEngine
+
+3
+Extracting engine configuration into the asynchronous start routine
+
+4
+Fixing the TypeScript typing mismatch between WebGL Engine and WebGPUEngine and re-initiating the user validation test
+
+5
+Waiting on the user to re-run the minigame to verify WebGPU and the WGSL shader compilation
+
+Good catch on the console logs!
+
+That exact output ([Atmosphere] WebGL fallback detected...) told us exactly what the issue was: our Orchestrator constructor was instantiating the Babylon scene synchronously, which forced it to use the default WebGL Engine instead of the advanced WebGPUEngine (which requires an asynchronous handshake with your graphics card).
+
+I have fully rebuilt the initialization sequence. The game will now gracefully halt during start(), await a native WebGPU context from your browser, and only then build the scene and execute the dummy compile tests!
+
+The floating-origin math test passed natively, which is also great news! (6360 - 6360 = 0) | (6460 - 6360 = 100).
+
+Could you refresh the page and launch the Descent Minigame one more time? Your console logs should now display Gate 1 & 2 WGSL Test Result: true confirming WebGPU is fully active! Let me know what it says.
+
+(index):1 Error while parsing WGSL: :3:1 error: unexpected token
+dummyComputeShader
+^^^^^^^^^^^^^^^^^^
+
+
+ - While calling [Device "BabylonWebGPUDevice1"].CreateShaderModule([ShaderModuleDescriptor]).
+Understand this warning
+installHook.js:1 BJS - [15:55:24]: Unable to compile compute effect:
+overrideMethod @ installHook.js:1
+error @ intercept-console-error.js:57
+_LogEnabled @ logger.js:56
+_processCompilationErrors @ computeEffect.js:318
+eval @ computeEffect.js:290
+eval @ engine.computeShader.js:138
+Promise.then
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine._executeWhenComputeStateIsCompiled @ engine.computeShader.js:120
+_prepareEffect @ computeEffect.js:288
+_useFinalCode @ computeEffect.js:152
+eval @ computeEffect.js:140
+eval @ shaderProcessor.js:70
+ProcessIncludes @ shaderProcessor.js:418
+PreProcess @ shaderProcessor.js:65
+eval @ computeEffect.js:134
+_loadShader @ computeEffect.js:236
+ComputeEffect @ computeEffect.js:132
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine.createComputeEffect @ engine.computeShader.js:26
+isReady @ computeShader.js:253
+_checkContext @ computeShader.js:295
+dispatch @ computeShader.js:274
+runDummyWGSLTest @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\atmosphere\core\__tests__\dummy_compute.ts:64
+start @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\core\MinigameOrchestrator.ts:127
+await in start
+DescentMinigameView.useEffect @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\components\DescentMinigameView.tsx:52
+react_stack_bottom_frame @ react-dom-client.development.js:23669
+runWithFiberInDEV @ react-dom-client.development.js:872
+commitHookEffectListMount @ react-dom-client.development.js:12345
+commitHookPassiveMountEffects @ react-dom-client.development.js:12466
+reconnectPassiveEffects @ react-dom-client.development.js:14563
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:16566
+runWithFiberInDEV @ react-dom-client.development.js:872
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16530
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16575
+flushPassiveEffects @ react-dom-client.development.js:16348
+flushPendingEffects @ react-dom-client.development.js:16299
+flushSpawnedWork @ react-dom-client.development.js:16265
+commitRoot @ react-dom-client.development.js:15998
+commitRootWhenReady @ react-dom-client.development.js:15228
+performWorkOnRoot @ react-dom-client.development.js:15147
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<DescentMinigameView>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:323
+Home @ D:\soft\1N59T_0M\infinite-zoom-planet\app\page.tsx:720
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<Home>
+exports.jsx @ react-jsx-runtime.development.js:323
+ClientPageRoot @ client-page.js:20
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10807
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15721
+renderRootConcurrent @ react-dom-client.development.js:15696
+performWorkOnRoot @ react-dom-client.development.js:14990
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+Function.all @ VM26521 <anonymous>:1
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1376Understand this error
+installHook.js:1 BJS - [15:55:24]: Defines:
+#define main
+overrideMethod @ installHook.js:1
+error @ intercept-console-error.js:57
+_LogEnabled @ logger.js:56
+_processCompilationErrors @ computeEffect.js:320
+eval @ computeEffect.js:290
+eval @ engine.computeShader.js:138
+Promise.then
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine._executeWhenComputeStateIsCompiled @ engine.computeShader.js:120
+_prepareEffect @ computeEffect.js:288
+_useFinalCode @ computeEffect.js:152
+eval @ computeEffect.js:140
+eval @ shaderProcessor.js:70
+ProcessIncludes @ shaderProcessor.js:418
+PreProcess @ shaderProcessor.js:65
+eval @ computeEffect.js:134
+_loadShader @ computeEffect.js:236
+ComputeEffect @ computeEffect.js:132
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine.createComputeEffect @ engine.computeShader.js:26
+isReady @ computeShader.js:253
+_checkContext @ computeShader.js:295
+dispatch @ computeShader.js:274
+runDummyWGSLTest @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\atmosphere\core\__tests__\dummy_compute.ts:64
+start @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\core\MinigameOrchestrator.ts:127
+await in start
+DescentMinigameView.useEffect @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\components\DescentMinigameView.tsx:52
+react_stack_bottom_frame @ react-dom-client.development.js:23669
+runWithFiberInDEV @ react-dom-client.development.js:872
+commitHookEffectListMount @ react-dom-client.development.js:12345
+commitHookPassiveMountEffects @ react-dom-client.development.js:12466
+reconnectPassiveEffects @ react-dom-client.development.js:14563
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:16566
+runWithFiberInDEV @ react-dom-client.development.js:872
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16530
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16575
+flushPassiveEffects @ react-dom-client.development.js:16348
+flushPendingEffects @ react-dom-client.development.js:16299
+flushSpawnedWork @ react-dom-client.development.js:16265
+commitRoot @ react-dom-client.development.js:15998
+commitRootWhenReady @ react-dom-client.development.js:15228
+performWorkOnRoot @ react-dom-client.development.js:15147
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<DescentMinigameView>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:323
+Home @ D:\soft\1N59T_0M\infinite-zoom-planet\app\page.tsx:720
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<Home>
+exports.jsx @ react-jsx-runtime.development.js:323
+ClientPageRoot @ client-page.js:20
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10807
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15721
+renderRootConcurrent @ react-dom-client.development.js:15696
+performWorkOnRoot @ react-dom-client.development.js:14990
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+Function.all @ VM26521 <anonymous>:1
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1376Understand this error
+installHook.js:1 BJS - [15:55:24]: Compute code:
+overrideMethod @ installHook.js:1
+error @ intercept-console-error.js:57
+_LogEnabled @ logger.js:56
+_processCompilationErrors @ computeEffect.js:325
+eval @ computeEffect.js:290
+eval @ engine.computeShader.js:138
+Promise.then
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine._executeWhenComputeStateIsCompiled @ engine.computeShader.js:120
+_prepareEffect @ computeEffect.js:288
+_useFinalCode @ computeEffect.js:152
+eval @ computeEffect.js:140
+eval @ shaderProcessor.js:70
+ProcessIncludes @ shaderProcessor.js:418
+PreProcess @ shaderProcessor.js:65
+eval @ computeEffect.js:134
+_loadShader @ computeEffect.js:236
+ComputeEffect @ computeEffect.js:132
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine.createComputeEffect @ engine.computeShader.js:26
+isReady @ computeShader.js:253
+_checkContext @ computeShader.js:295
+dispatch @ computeShader.js:274
+runDummyWGSLTest @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\atmosphere\core\__tests__\dummy_compute.ts:64
+start @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\core\MinigameOrchestrator.ts:127
+await in start
+DescentMinigameView.useEffect @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\components\DescentMinigameView.tsx:52
+react_stack_bottom_frame @ react-dom-client.development.js:23669
+runWithFiberInDEV @ react-dom-client.development.js:872
+commitHookEffectListMount @ react-dom-client.development.js:12345
+commitHookPassiveMountEffects @ react-dom-client.development.js:12466
+reconnectPassiveEffects @ react-dom-client.development.js:14563
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:16566
+runWithFiberInDEV @ react-dom-client.development.js:872
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16530
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16575
+flushPassiveEffects @ react-dom-client.development.js:16348
+flushPendingEffects @ react-dom-client.development.js:16299
+flushSpawnedWork @ react-dom-client.development.js:16265
+commitRoot @ react-dom-client.development.js:15998
+commitRootWhenReady @ react-dom-client.development.js:15228
+performWorkOnRoot @ react-dom-client.development.js:15147
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<DescentMinigameView>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:323
+Home @ D:\soft\1N59T_0M\infinite-zoom-planet\app\page.tsx:720
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<Home>
+exports.jsx @ react-jsx-runtime.development.js:323
+ClientPageRoot @ client-page.js:20
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10807
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15721
+renderRootConcurrent @ react-dom-client.development.js:15696
+performWorkOnRoot @ react-dom-client.development.js:14990
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+Function.all @ VM26521 <anonymous>:1
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1376Understand this error
+installHook.js:1 BJS - [15:55:24]: //#define SHADER_NAME compute:[object Object]
+dummyComputeShader
+
+overrideMethod @ installHook.js:1
+error @ intercept-console-error.js:57
+_LogEnabled @ logger.js:56
+_processCompilationErrors @ computeEffect.js:326
+eval @ computeEffect.js:290
+eval @ engine.computeShader.js:138
+Promise.then
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine._executeWhenComputeStateIsCompiled @ engine.computeShader.js:120
+_prepareEffect @ computeEffect.js:288
+_useFinalCode @ computeEffect.js:152
+eval @ computeEffect.js:140
+eval @ shaderProcessor.js:70
+ProcessIncludes @ shaderProcessor.js:418
+PreProcess @ shaderProcessor.js:65
+eval @ computeEffect.js:134
+_loadShader @ computeEffect.js:236
+ComputeEffect @ computeEffect.js:132
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine.createComputeEffect @ engine.computeShader.js:26
+isReady @ computeShader.js:253
+_checkContext @ computeShader.js:295
+dispatch @ computeShader.js:274
+runDummyWGSLTest @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\atmosphere\core\__tests__\dummy_compute.ts:64
+start @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\core\MinigameOrchestrator.ts:127
+await in start
+DescentMinigameView.useEffect @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\components\DescentMinigameView.tsx:52
+react_stack_bottom_frame @ react-dom-client.development.js:23669
+runWithFiberInDEV @ react-dom-client.development.js:872
+commitHookEffectListMount @ react-dom-client.development.js:12345
+commitHookPassiveMountEffects @ react-dom-client.development.js:12466
+reconnectPassiveEffects @ react-dom-client.development.js:14563
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:16566
+runWithFiberInDEV @ react-dom-client.development.js:872
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16530
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16575
+flushPassiveEffects @ react-dom-client.development.js:16348
+flushPendingEffects @ react-dom-client.development.js:16299
+flushSpawnedWork @ react-dom-client.development.js:16265
+commitRoot @ react-dom-client.development.js:15998
+commitRootWhenReady @ react-dom-client.development.js:15228
+performWorkOnRoot @ react-dom-client.development.js:15147
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<DescentMinigameView>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:323
+Home @ D:\soft\1N59T_0M\infinite-zoom-planet\app\page.tsx:720
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<Home>
+exports.jsx @ react-jsx-runtime.development.js:323
+ClientPageRoot @ client-page.js:20
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10807
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15721
+renderRootConcurrent @ react-dom-client.development.js:15696
+performWorkOnRoot @ react-dom-client.development.js:14990
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+Function.all @ VM26521 <anonymous>:1
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1376Understand this error
+installHook.js:1 BJS - [15:55:24]: Line 3, Offset 61, Length 18, error: unexpected token
+overrideMethod @ installHook.js:1
+error @ intercept-console-error.js:57
+_LogEnabled @ logger.js:56
+_processCompilationErrors @ computeEffect.js:350
+eval @ computeEffect.js:290
+eval @ engine.computeShader.js:138
+Promise.then
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine._executeWhenComputeStateIsCompiled @ engine.computeShader.js:120
+_prepareEffect @ computeEffect.js:288
+_useFinalCode @ computeEffect.js:152
+eval @ computeEffect.js:140
+eval @ shaderProcessor.js:70
+ProcessIncludes @ shaderProcessor.js:418
+PreProcess @ shaderProcessor.js:65
+eval @ computeEffect.js:134
+_loadShader @ computeEffect.js:236
+ComputeEffect @ computeEffect.js:132
+_webgpuEngine_js__WEBPACK_IMPORTED_MODULE_2__.WebGPUEngine.createComputeEffect @ engine.computeShader.js:26
+isReady @ computeShader.js:253
+_checkContext @ computeShader.js:295
+dispatch @ computeShader.js:274
+runDummyWGSLTest @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\atmosphere\core\__tests__\dummy_compute.ts:64
+start @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\core\MinigameOrchestrator.ts:127
+await in start
+DescentMinigameView.useEffect @ D:\soft\1N59T_0M\infinite-zoom-planet\lib\descent-minigame\components\DescentMinigameView.tsx:52
+react_stack_bottom_frame @ react-dom-client.development.js:23669
+runWithFiberInDEV @ react-dom-client.development.js:872
+commitHookEffectListMount @ react-dom-client.development.js:12345
+commitHookPassiveMountEffects @ react-dom-client.development.js:12466
+reconnectPassiveEffects @ react-dom-client.development.js:14563
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:16566
+runWithFiberInDEV @ react-dom-client.development.js:872
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16530
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16536
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:16575
+flushPassiveEffects @ react-dom-client.development.js:16348
+flushPendingEffects @ react-dom-client.development.js:16299
+flushSpawnedWork @ react-dom-client.development.js:16265
+commitRoot @ react-dom-client.development.js:15998
+commitRootWhenReady @ react-dom-client.development.js:15228
+performWorkOnRoot @ react-dom-client.development.js:15147
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<DescentMinigameView>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:323
+Home @ D:\soft\1N59T_0M\infinite-zoom-planet\app\page.tsx:720
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10858
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopSync @ react-dom-client.development.js:15547
+renderRootSync @ react-dom-client.development.js:15527
+performWorkOnRoot @ react-dom-client.development.js:14991
+performSyncWorkOnRoot @ react-dom-client.development.js:16831
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:16677
+processRootScheduleInMicrotask @ react-dom-client.development.js:16715
+eval @ react-dom-client.development.js:16850
+<Home>
+exports.jsx @ react-jsx-runtime.development.js:323
+ClientPageRoot @ client-page.js:20
+react_stack_bottom_frame @ react-dom-client.development.js:23584
+renderWithHooksAgain @ react-dom-client.development.js:6893
+renderWithHooks @ react-dom-client.development.js:6805
+updateFunctionComponent @ react-dom-client.development.js:9247
+beginWork @ react-dom-client.development.js:10807
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15727
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15721
+renderRootConcurrent @ react-dom-client.development.js:15696
+performWorkOnRoot @ react-dom-client.development.js:14990
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16816
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+Function.all @ VM26521 <anonymous>:1
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1376Understand this error
+installHook.js:1 BJS - [15:55:24]: [Frame 2] WebGPU uncaptured error (2): [object GPUValidationError] - [TextureView "TextureView_SwapChain_ResolveTarget"] is associated with [Device "BabylonWebGPUDevice1"], and cannot be used with [Device "BabylonWebGPUDevice0"].
+ - While validating colorAttachments[0].
+ - While encoding [CommandEncoder "[0|0] - RenderEncoder"].BeginRenderPass([RenderPassDescriptor ""[0|1] - MainRenderPass""]).
+ - While finishing [CommandEncoder "[0|0] - RenderEncoder"].
+
+overrideMethod @ installHook.js:1
+_LogEnabled @ logger.js:56
+eval @ webgpuEngine.js:523Understand this warning
+(index):1 [TextureView "TextureView_SwapChain_ResolveTarget"] is associated with [Device "BabylonWebGPUDevice1"], and cannot be used with [Device "BabylonWebGPUDevice0"].
+ - While validating colorAttachments[0].
+ - While encoding [CommandEncoder "[0|0] - RenderEncoder"].BeginRenderPass([RenderPassDescriptor ""[0|1] - MainRenderPass""]).
+ - While finishing [CommandEncoder "[0|0] - RenderEncoder"].
+Understand this warning
+installHook.js:1 BJS - [15:55:24]: [Frame 2] WebGPU uncaptured error (3): [object GPUValidationError] - [Invalid CommandBuffer from CommandEncoder "[0|0] - RenderEncoder"] is invalid due to a previous error.
+ - While calling [Queue].Submit([[CommandBuffer from CommandEncoder "[0|0] - UploadEncoder"], [Invalid CommandBuffer from CommandEncoder "[0|0] - RenderEncoder"]])
+
+overrideMethod @ installHook.js:1
+_LogEnabled @ logger.js:56
+eval @ webgpuEngine.js:523Understand this warning
+(index):1 [Invalid CommandBuffer from CommandEncoder "[0|0] - RenderEncoder"] is invalid due to a previous error.
+ - While calling [Queue].Submit([[CommandBuffer from CommandEncoder "[0|0] - UploadEncoder"], [Invalid CommandBuffer from CommandEncoder "[0|0] - RenderEncoder"]])
+Understand this warning
+installHook.js:1 BJS - [15:55:24]: [Frame 2] WebGPU uncaptured error (4): [object GPUValidationError] - [TextureView "TextureView_SwapChain_ResolveTarget"] is associated with [Device "BabylonWebGPUDevice1"], and cannot be used with [Device "BabylonWebGPUDevice0"].
+ - While validating colorAttachments[0].
+ - While encoding [CommandEncoder "[1|0] - RenderEncoder"].BeginRenderPass([RenderPassDescriptor ""[1|1] - MainRenderPass""]).
+ - While finishing [CommandEncoder "[1|0] - RenderEncoder"].
+
+overrideMethod @ installHook.js:1
+_LogEnabled @ logger.js:56
+eval @ webgpuEngine.js:523Understand this warning
+(index):1 [TextureView "TextureView_SwapChain_ResolveTarget"] is associated with [Device "BabylonWebGPUDevice1"], and cannot be used with [Device "BabylonWebGPUDevice0"].
+ - While validating colorAttachments[0].
+ - While encoding [CommandEncoder "[1|0] - RenderEncoder"].BeginRenderPass([RenderPassDescriptor ""[1|1] - MainRenderPass""]).
+ - While finishing [CommandEncoder "[1|0] - RenderEncoder"].
+Understand this warning
+installHook.js:1 BJS - [15:55:24]: [Frame 2] WebGPU uncaptured error (5): [object GPUValidationError] - [Invalid CommandBuffer from CommandEncoder "[1|0] - RenderEncoder"] is invalid due to a previous error.
+ - While calling [Queue].Submit([[CommandBuffer from CommandEncoder "[1|0] - UploadEncoder"], [Invalid CommandBuffer from CommandEncoder "[1|0] - RenderEncoder"]])
+
+overrideMethod @ installHook.js:1
+_LogEnabled @ logger.js:56
+eval @ webgpuEngine.js:523Understand this warning
+(index):1 [Invalid CommandBuffer from CommandEncoder "[1|0] - RenderEncoder"] is invalid due to a previous error.
+ - While calling [Queue].Submit([[CommandBuffer from CommandEncoder "[1|0] - UploadEncoder"], [Invalid CommandBuffer from CommandEncoder "[1|0] - RenderEncoder"]])
+Understand this warning
+installHook.js:1 BJS - [15:55:24]: [Frame 7] WebGPU uncaptured error (6): [object GPUValidationError] - [TextureView "TextureView_SwapChain_ResolveTarget"] is associated with [Device "BabylonWebGPUDevice1"], and cannot be used with [Device "BabylonWebGPUDevice0"].
+ - While validating colorAttachments[0].
+ - While encoding [CommandEncoder "[2|0] - RenderEncoder"].BeginRenderPass([RenderPassDescriptor ""[2|1] - MainRenderPass""]).
+ - While finishing [CommandEncoder "[2|0] - RenderEncoder"].
