@@ -1,4 +1,4 @@
-import { Engine, Scene, FreeCamera, ArcRotateCamera, Vector3, DirectionalLight, SceneLoader, Color4, AbstractMesh, MeshBuilder, StandardMaterial, Texture, Color3, PostProcess, Effect, Mesh, Quaternion, VertexData, Camera, Constants, ShaderLanguage } from "@babylonjs/core";
+import { Engine, Scene, FreeCamera, ArcRotateCamera, Vector3, DirectionalLight, SceneLoader, Color4, AbstractMesh, MeshBuilder, StandardMaterial, Texture, Color3, PostProcess, Effect, Mesh, Quaternion, VertexData, Camera } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { ConfigManager } from "../config/ConfigManager";
 import { DescentPayload } from "../config/types";
@@ -6,11 +6,7 @@ import { PreLaunchTerminal } from "./PreLaunchTerminal";
 import { TurbulenceController } from "./TurbulenceController";
 import { VoiceCommsService } from "./VoiceCommsService";
 import { AlarmManager } from "./AlarmManager";
-import { ShaderStore } from "@babylonjs/core/Engines/shaderStore";
-import { AtmospherePipeline } from "../../atmosphere/core/AtmospherePipeline";
-import { CloudPipeline } from "../../atmosphere/core/CloudPipeline";
-import { atmospherePassWGSL } from "../../atmosphere/shaders/atmospherePassShader";
-import { cloudShellWGSL } from "../../atmosphere/shaders/cloudShellShader";
+
 
 export enum MinigameState {
     INIT = 'INIT',
@@ -84,16 +80,6 @@ export class MinigameOrchestrator {
     private pickedPoint?: Vector3;
     private pickedDir = new Vector3(0, 0, -1); 
 
-    // --- WebGPU Atmosphere & Cloud Pipeline Integration ---
-    private atmospherePipeline: AtmospherePipeline | null = null;
-    private cloudPipeline: CloudPipeline | null = null;
-    private atmospherePostProcessArc: PostProcess | null = null;
-    private atmospherePostProcessFree: PostProcess | null = null;
-    private cloudPostProcessArc: PostProcess | null = null;
-    private cloudPostProcessFree: PostProcess | null = null;
-    private sunLight!: DirectionalLight;
-    private sunDirection = new Vector3(1, 0.5, -1).normalize();
-
     constructor(
         canvas: HTMLCanvasElement,
         public configUrl?: string
@@ -113,7 +99,7 @@ export class MinigameOrchestrator {
 
         this.scene.activeCamera = this.arcCamera;
         
-        this.sunLight = new DirectionalLight("SunLight", new Vector3(-1, -0.5, 1), this.scene);
+        new DirectionalLight("SunLight", new Vector3(-1, -0.5, 1), this.scene);
 
         this.minigamePromise = new Promise<number>((res) => {
             this.resolvePromise = res;
@@ -276,9 +262,6 @@ export class MinigameOrchestrator {
         });
 
         this.engine.runRenderLoop(() => this.scene.render());
-
-        // 4. Initialize WebGPU Atmosphere & Cloud Pipelines
-        this.initAtmosphereAndClouds();
 
         this.setState(MinigameState.ALIGN);
 
@@ -785,176 +768,6 @@ export class MinigameOrchestrator {
         }
     }
 
-    // --- WebGPU Atmosphere & Cloud Pipeline Integration Methods ---
-
-    private initAtmosphereAndClouds() {
-        try {
-            this.atmospherePipeline = new AtmospherePipeline(this.engine);
-
-            if (this.atmospherePipeline.getState() !== 2 /* PipelineState.READY */) {
-                console.warn("[MinigameOrchestrator] AtmospherePipeline failed to init. Atmospheric effects disabled.");
-                this.atmospherePipeline = null;
-                return;
-            }
-
-            this.cloudPipeline = new CloudPipeline(this.engine, this.scene, this.atmospherePipeline.dispatcher);
-
-            if (this.cloudPipeline.getState() !== 2 /* CloudPipelineState.READY */) {
-                console.warn("[MinigameOrchestrator] CloudPipeline failed to init. Cloud effects disabled.");
-                this.cloudPipeline = null;
-            }
-
-            this.createAtmospherePostProcesses();
-            this.createCloudPostProcesses();
-
-            console.log("[MinigameOrchestrator] Atmosphere & Cloud pipelines initialized successfully.");
-        } catch (e) {
-            console.warn("[MinigameOrchestrator] WebGPU atmosphere/cloud init failed (WebGL fallback?):", e);
-            this.atmospherePipeline = null;
-            this.cloudPipeline = null;
-        }
-    }
-
-    private getCameraVectors(): { pos: Vector3, fwd: Vector3, right: Vector3, up: Vector3, fov: number } {
-        const cam = this.scene.activeCamera!;
-        const pos = cam.position.clone();
-        let fwd: Vector3;
-
-        if (cam instanceof ArcRotateCamera) {
-            fwd = cam.target.subtract(cam.position).normalize();
-        } else {
-            fwd = (cam as FreeCamera).getDirection(Vector3.Forward());
-        }
-
-        let tempUp = Vector3.Up();
-        if (Math.abs(Vector3.Dot(fwd, tempUp)) > 0.999) {
-            tempUp = new Vector3(0, 0, -1);
-        }
-        // Babylon Left-Handed: Right = Cross(Up, Forward)
-        const right = Vector3.Cross(tempUp, fwd).normalize();
-        const up = Vector3.Cross(fwd, right).normalize();
-        const fov = (cam as any).fov || 0.8;
-
-        return { pos, fwd, right, up, fov };
-    }
-
-    private createAtmospherePostProcesses() {
-        if (!this.atmospherePipeline) return;
-
-        // Register the WGSL fragment shader in Babylon's ShaderStore
-        ShaderStore.ShadersStoreWGSL["atmospherePassFragmentShader"] = atmospherePassWGSL;
-
-        const atmoUniforms = [
-            "planetRadius", "atmoTop", "camPos", "sunDir",
-            "camFwd", "camRight", "camUp", "tanFov", "aspectRatio"
-        ];
-        const atmoSamplers = ["transmittanceLUT"];
-
-        const applyAtmoUniforms = (effect: Effect) => {
-            const cv = this.getCameraVectors();
-            const sunDir = this.sunDirection;
-
-            effect.setFloat("planetRadius", this.surfaceRadius);
-            effect.setFloat("atmoTop", this.surfaceRadius + 0.15);
-            effect.setFloat3("camPos", cv.pos.x, cv.pos.y, cv.pos.z);
-            effect.setFloat3("sunDir", sunDir.x, sunDir.y, sunDir.z);
-            effect.setFloat3("camFwd", cv.fwd.x, cv.fwd.y, cv.fwd.z);
-            effect.setFloat3("camRight", cv.right.x, cv.right.y, cv.right.z);
-            effect.setFloat3("camUp", cv.up.x, cv.up.y, cv.up.z);
-            effect.setFloat("tanFov", Math.tan(cv.fov / 2));
-            effect.setFloat("aspectRatio", this.engine.getRenderWidth() / this.engine.getRenderHeight());
-
-            effect.setTexture("transmittanceLUT", this.atmospherePipeline!.transmittanceTexture);
-        };
-
-        this.atmospherePostProcessArc = new PostProcess(
-            "atmospherePassArc", "atmospherePass",
-            atmoUniforms, atmoSamplers, 1.0, this.arcCamera,
-            Texture.BILINEAR_SAMPLINGMODE, this.engine,
-            false, null, Constants.TEXTURETYPE_UNSIGNED_BYTE,
-            undefined, undefined, false, undefined,
-            ShaderLanguage.WGSL
-        );
-        this.atmospherePostProcessArc.onApply = applyAtmoUniforms;
-
-        this.atmospherePostProcessFree = new PostProcess(
-            "atmospherePassFree", "atmospherePass",
-            atmoUniforms, atmoSamplers, 1.0, this.freeCamera,
-            Texture.BILINEAR_SAMPLINGMODE, this.engine,
-            false, null, Constants.TEXTURETYPE_UNSIGNED_BYTE,
-            undefined, undefined, false, undefined,
-            ShaderLanguage.WGSL
-        );
-        this.atmospherePostProcessFree.onApply = applyAtmoUniforms;
-    }
-
-    private createCloudPostProcesses() {
-        if (!this.cloudPipeline || !this.atmospherePipeline) return;
-
-        // Register the WGSL fragment shader — noise_common include was already
-        // registered by CloudPipeline's constructor
-        ShaderStore.ShadersStoreWGSL["cloudShellFragmentShader"] = cloudShellWGSL;
-
-        const cloudUniforms = [
-            "planetRadius", "cloudBottom", "cloudTop", "coverageAmt",
-            "densityMul", "elapsedTime", "camPos", "sunDir",
-            "camFwd", "camRight", "camUp", "tanFov", "aspectRatio"
-        ];
-        const cloudSamplers = ["transmittanceLUT", "baseNoiseTex", "detailNoiseTex"];
-
-        // Tropospheric scaling: compress cloud bounds to physical Earth proportions
-        // surfaceRadius 5.0 = 6360km, so 0.01 BU ≈ 12.7km, 0.05 BU ≈ 63.5km
-        const cloudBottom = this.surfaceRadius + 0.01;
-        const cloudTop = this.surfaceRadius + 0.05;
-
-        const applyCloudUniforms = (effect: Effect) => {
-            // isReady() guard: prevent GPU BindGroup evaluation until compute passes finish
-            if (!this.cloudPipeline || this.cloudPipeline.getState() !== 2 /* READY */) return;
-            if (!this.atmospherePipeline) return;
-
-            const cv = this.getCameraVectors();
-            const sunDir = this.sunDirection;
-
-            effect.setFloat("planetRadius", this.surfaceRadius);
-            effect.setFloat("cloudBottom", cloudBottom);
-            effect.setFloat("cloudTop", cloudTop);
-            effect.setFloat("coverageAmt", 1.0);
-            effect.setFloat("densityMul", 500.0);
-            effect.setFloat("elapsedTime", this.timeElapsed);
-            effect.setFloat3("camPos", cv.pos.x, cv.pos.y, cv.pos.z);
-            effect.setFloat3("sunDir", sunDir.x, sunDir.y, sunDir.z);
-            effect.setFloat3("camFwd", cv.fwd.x, cv.fwd.y, cv.fwd.z);
-            effect.setFloat3("camRight", cv.right.x, cv.right.y, cv.right.z);
-            effect.setFloat3("camUp", cv.up.x, cv.up.y, cv.up.z);
-            effect.setFloat("tanFov", Math.tan(cv.fov / 2));
-            effect.setFloat("aspectRatio", this.engine.getRenderWidth() / this.engine.getRenderHeight());
-
-            effect.setTexture("transmittanceLUT", this.atmospherePipeline!.transmittanceTexture);
-            effect.setTexture("baseNoiseTex", this.cloudPipeline!.baseNoiseTexture);
-            effect.setTexture("detailNoiseTex", this.cloudPipeline!.detailNoiseTexture);
-        };
-
-        this.cloudPostProcessArc = new PostProcess(
-            "cloudShellArc", "cloudShell",
-            cloudUniforms, cloudSamplers, 1.0, this.arcCamera,
-            Texture.BILINEAR_SAMPLINGMODE, this.engine,
-            false, null, Constants.TEXTURETYPE_UNSIGNED_BYTE,
-            undefined, undefined, false, undefined,
-            ShaderLanguage.WGSL
-        );
-        this.cloudPostProcessArc.onApply = applyCloudUniforms;
-
-        this.cloudPostProcessFree = new PostProcess(
-            "cloudShellFree", "cloudShell",
-            cloudUniforms, cloudSamplers, 1.0, this.freeCamera,
-            Texture.BILINEAR_SAMPLINGMODE, this.engine,
-            false, null, Constants.TEXTURETYPE_UNSIGNED_BYTE,
-            undefined, undefined, false, undefined,
-            ShaderLanguage.WGSL
-        );
-        this.cloudPostProcessFree.onApply = applyCloudUniforms;
-    }
-
     public end() {
         this.setState(MinigameState.END);
         
@@ -978,24 +791,6 @@ export class MinigameOrchestrator {
             this.timelapsePostProcess.dispose();
             this.timelapsePostProcess = null;
         }
-        if (this.atmospherePostProcessArc) {
-            this.atmospherePostProcessArc.dispose();
-            this.atmospherePostProcessArc = null;
-        }
-        if (this.atmospherePostProcessFree) {
-            this.atmospherePostProcessFree.dispose();
-            this.atmospherePostProcessFree = null;
-        }
-        if (this.cloudPostProcessArc) {
-            this.cloudPostProcessArc.dispose();
-            this.cloudPostProcessArc = null;
-        }
-        if (this.cloudPostProcessFree) {
-            this.cloudPostProcessFree.dispose();
-            this.cloudPostProcessFree = null;
-        }
-        this.atmospherePipeline = null;
-        this.cloudPipeline = null;
 
         this.engine.stopRenderLoop(); 
         
